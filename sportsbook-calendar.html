@@ -37,9 +37,13 @@ tailwind.config = {
   .tab-inactive:hover{color:#9aa3b0}
 
   .day-cell{
-    min-height:110px;background:#1c2028;border:1px solid #2e3440;
+    min-height:140px;max-height:220px;background:#1c2028;border:1px solid #2e3440;
     transition:border-color .15s,background .15s;position:relative;
+    overflow-y:auto;overflow-x:hidden;
   }
+  .day-cell::-webkit-scrollbar{width:3px}
+  .day-cell::-webkit-scrollbar-track{background:transparent}
+  .day-cell::-webkit-scrollbar-thumb{background:#3d4452;border-radius:2px}
   .day-cell:hover{border-color:#3d4452}
   .day-cell.vol-low {border-left:3px solid #15803d;background:#0a1a10}
   .day-cell.vol-med {border-left:3px solid #a16207;background:#1a1200}
@@ -323,6 +327,8 @@ const LEAGUES = {
   'tur.1':        { name:'Turkey Süper Lig',              sport:'soccer',     slug:'tur.1',                 pillClass:'pill-soccer',   group:'Soccer - Turkey'      },
   'gre.1':        { name:'Greece Super League',           sport:'soccer',     slug:'gre.1',                 pillClass:'pill-soccer',   group:'Soccer - Greece'      },
   'bra.1':        { name:'Brazil Brasileirão Série A',    sport:'soccer',     slug:'bra.1',                 pillClass:'pill-soccer',   group:'Soccer - Brazil'      },
+  'conmebol.libertadores': { name:'South America Copa Libertadores', sport:'soccer', slug:'conmebol.libertadores', pillClass:'pill-soccer', group:'Soccer - South America' },
+  'conmebol.sudamericana': { name:'South America Copa Sudamericana', sport:'soccer', slug:'conmebol.sudamericana', pillClass:'pill-soccer', group:'Soccer - South America' },
   'arg.1':        { name:'Argentina Liga Profesional',    sport:'soccer',     slug:'arg.1',                 pillClass:'pill-soccer',   group:'Soccer - Argentina'   },
   'usa.1':        { name:'USA MLS',                       sport:'soccer',     slug:'usa.1',                 pillClass:'pill-soccer',   group:'Soccer - USA'         },
   'uefa.champions':     { name:'UEFA Champions League',   sport:'soccer',     slug:'uefa.champions',        pillClass:'pill-soccer',   group:'Soccer - Europe'      },
@@ -335,6 +341,7 @@ const LEAGUES = {
   'wnba':         { name:'WNBA',                     sport:'basketball', slug:'wnba',                  pillClass:'pill-basketball',group:'Basketball - USA'     },
   'mens-college-basketball':{ name:'NCAA Basketball',sport:'basketball', slug:'mens-college-basketball',pillClass:'pill-basketball',group:'Basketball - USA'   },
   'euroleague':   { name:'EuroLeague',               sport:'basketball', slug:'euroleague',            pillClass:'pill-basketball',group:'Basketball - Europe'  },
+  'eurocup':      { name:'EuroCup',                  sport:'basketball', slug:'eurocup',               pillClass:'pill-basketball',group:'Basketball - Europe'  },
   'nfl':          { name:'NFL',                      sport:'football',   slug:'nfl',                   pillClass:'pill-football',  group:'American Football'    },
   'college-football':{ name:'NCAA Football',         sport:'football',   slug:'college-football',      pillClass:'pill-football',  group:'American Football'    },
   'mlb':          { name:'MLB',                      sport:'baseball',   slug:'mlb',                   pillClass:'pill-baseball',  group:'Baseball'             },
@@ -725,7 +732,7 @@ function renderCalendar() {
           onmousemove="pillMove(event)"
           onmouseleave="pillLeave()">${label}</span>`];
       });
-      const show=pillItems.slice(0,4), extra=pillItems.length-show.length;
+      const show=pillItems, extra=0;
       pillsHtml=show.join('');
       if (extra) pillsHtml+=`<span class="event-pill mt-0.5 opacity-60 cursor-default">+${extra} more</span>`;
     }
@@ -820,7 +827,13 @@ function init() {
   document.getElementById('thresh-med').value=th.med;
   populateDropdowns();
   if (!loadPool().length) {
-    const demo=['fifa.world','eng.1','ita.1','esp.1','ger.1','uefa.champions','nba'];
+    const demo = [
+      'fifa.world','eng.1','ita.1','esp.1','ger.1',
+      'uefa.champions','uefa.europa_qual','uefa.europa.conf_qual',
+      'bra.1','conmebol.libertadores','conmebol.sudamericana',
+      'euroleague','eurocup','nba',
+      'atp','wta',
+    ];
     savePool(demo); activeFilters=[...demo]; saveFilters(activeFilters);
   }
   renderPool(); renderFilterChips(); renderCalendar();
