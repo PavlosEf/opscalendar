@@ -245,17 +245,34 @@ tailwind.config = {
       <div><span class="text-green">CORS:</span> Open — works from any browser or GitHub Pages</div>
     </div>
   </div>
+  <div class="mb-8 p-4 rounded border border-accent" style="background:#0a1628">
+    <div class="text-accent font-mono text-xs uppercase tracking-widest mb-1">LEAGUE CATALOG</div>
+    <p class="text-text-muted text-sm mb-2">
+      Full list of every league ESPN's API provides (260 across soccer, basketball, American football, baseball,
+      ice hockey and tennis), with country and ESPN slug. Mark <strong class="text-text-bright">Include (Y/N)</strong>
+      on the ones you want added here, and add notes for anything odd — this sheet is the source of truth for
+      growing the league picker below.
+    </p>
+    <a href="https://docs.google.com/spreadsheets/d/1e5OoUPYvpbmsmcBVYHCk-Kx3BSGMW6UFZmC3FNq_gig/edit" target="_blank" rel="noopener"
+      class="inline-block font-mono text-xs font-semibold px-4 py-2 rounded border border-accent text-accent hover:bg-accent-dim transition-all uppercase">
+      Open League Catalog ↗
+    </a>
+  </div>
   <div class="mb-8">
     <div class="text-text-muted font-mono text-xs uppercase tracking-widest mb-1">SECTION 01</div>
     <h2 class="text-text-bright font-semibold text-lg mb-4">League Manager</h2>
     <div class="flex flex-wrap gap-3 items-end mb-3">
       <div>
         <label class="block text-xs font-mono text-text-muted uppercase tracking-wider mb-1">Sport</label>
-        <select id="sel-sport" onchange="onSportChange()" style="min-width:160px"><option value="">— Select —</option></select>
+        <select id="sel-sport" style="min-width:160px"><option value="">— Select —</option></select>
+      </div>
+      <div>
+        <label class="block text-xs font-mono text-text-muted uppercase tracking-wider mb-1">Country</label>
+        <select id="sel-country" style="min-width:180px" disabled><option value="">— Select Sport First —</option></select>
       </div>
       <div>
         <label class="block text-xs font-mono text-text-muted uppercase tracking-wider mb-1">League</label>
-        <select id="sel-league" style="min-width:260px" disabled><option value="">— Select Sport First —</option></select>
+        <select id="sel-league" style="min-width:260px" disabled><option value="">— Select Country First —</option></select>
       </div>
       <button onclick="addToPool()"
         class="font-mono text-xs font-semibold px-4 py-2 rounded border border-accent bg-accent-bg text-accent hover:bg-accent-dim transition-all uppercase">
@@ -269,8 +286,26 @@ tailwind.config = {
       </div>
     </div>
   </div>
-  <div class="border-t border-border pt-8">
+  <div class="mb-8 border-t border-border pt-8">
     <div class="text-text-muted font-mono text-xs uppercase tracking-widest mb-1">SECTION 02</div>
+    <h2 class="text-text-bright font-semibold text-lg mb-1">Saved League Setups</h2>
+    <p class="text-text-muted text-sm mb-3">Save your current pool under a name, then apply it instantly later instead of rebuilding it league by league.</p>
+    <div class="flex flex-wrap gap-3 items-end mb-3">
+      <div>
+        <label class="block text-xs font-mono text-text-muted uppercase tracking-wider mb-1">Setup Name</label>
+        <input type="text" id="preset-name" placeholder="e.g. Weekday Core" style="min-width:220px">
+      </div>
+      <button onclick="saveCurrentAsPreset()"
+        class="font-mono text-xs font-semibold px-4 py-2 rounded border border-accent bg-accent-bg text-accent hover:bg-accent-dim transition-all uppercase">
+        💾 Save Current Pool
+      </button>
+    </div>
+    <div id="preset-list" class="border border-border rounded divide-y divide-border overflow-hidden">
+      <div class="p-3 text-text-muted font-mono text-xs italic">No saved setups.</div>
+    </div>
+  </div>
+  <div class="border-t border-border pt-8">
+    <div class="text-text-muted font-mono text-xs uppercase tracking-widest mb-1">SECTION 03</div>
     <h2 class="text-text-bright font-semibold text-lg mb-4">Volume Thresholds</h2>
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
       <div class="p-4 rounded border border-green-border bg-green-bg">
@@ -309,45 +344,65 @@ const MONTH_NAMES = ['January','February','March','April','May','June',
   'July','August','September','October','November','December'];
 
 // ── LEAGUE REGISTRY ─────────────────────────────────────────────────
-// ONLY CHANGE FROM WORKING VERSION: added 3 qualifying leagues below
+// country: used to build the Sport → Country → League picker in Settings.
+// 'International' = confederation/world tournaments with no single home country.
+const SPORT_LABELS = { soccer:'Soccer', basketball:'Basketball', football:'American Football', baseball:'Baseball', hockey:'Ice Hockey', tennis:'Tennis' };
+
 const LEAGUES = {
-  'fifa.world':   { name:'FIFA World Cup 2026',          sport:'soccer',     slug:'fifa.world',            pillClass:'pill-wc',       group:'Soccer - World'       },
-  'fifa.cwc':     { name:'FIFA Club World Cup',           sport:'soccer',     slug:'fifa.cwc',              pillClass:'pill-wc',       group:'Soccer - World'       },
-  'eng.1':        { name:'England Premier League',        sport:'soccer',     slug:'eng.1',                 pillClass:'pill-soccer',   group:'Soccer - England'     },
-  'eng.2':        { name:'England Championship',          sport:'soccer',     slug:'eng.2',                 pillClass:'pill-soccer',   group:'Soccer - England'     },
-  'esp.1':        { name:'Spain La Liga',                 sport:'soccer',     slug:'esp.1',                 pillClass:'pill-soccer',   group:'Soccer - Spain'       },
-  'esp.2':        { name:'Spain Segunda División',        sport:'soccer',     slug:'esp.2',                 pillClass:'pill-soccer',   group:'Soccer - Spain'       },
-  'ger.1':        { name:'Germany Bundesliga',            sport:'soccer',     slug:'ger.1',                 pillClass:'pill-soccer',   group:'Soccer - Germany'     },
-  'ger.2':        { name:'Germany 2. Bundesliga',         sport:'soccer',     slug:'ger.2',                 pillClass:'pill-soccer',   group:'Soccer - Germany'     },
-  'ita.1':        { name:'Italy Serie A',                 sport:'soccer',     slug:'ita.1',                 pillClass:'pill-soccer',   group:'Soccer - Italy'       },
-  'ita.2':        { name:'Italy Serie B',                 sport:'soccer',     slug:'ita.2',                 pillClass:'pill-soccer',   group:'Soccer - Italy'       },
-  'fra.1':        { name:'France Ligue 1',                sport:'soccer',     slug:'fra.1',                 pillClass:'pill-soccer',   group:'Soccer - France'      },
-  'por.1':        { name:'Portugal Primeira Liga',        sport:'soccer',     slug:'por.1',                 pillClass:'pill-soccer',   group:'Soccer - Portugal'    },
-  'ned.1':        { name:'Netherlands Eredivisie',        sport:'soccer',     slug:'ned.1',                 pillClass:'pill-soccer',   group:'Soccer - Netherlands' },
-  'tur.1':        { name:'Turkey Süper Lig',              sport:'soccer',     slug:'tur.1',                 pillClass:'pill-soccer',   group:'Soccer - Turkey'      },
-  'gre.1':        { name:'Greece Super League',           sport:'soccer',     slug:'gre.1',                 pillClass:'pill-soccer',   group:'Soccer - Greece'      },
-  'bra.1':        { name:'Brazil Brasileirão Série A',    sport:'soccer',     slug:'bra.1',                 pillClass:'pill-soccer',   group:'Soccer - Brazil'      },
-  'conmebol.libertadores': { name:'South America Copa Libertadores', sport:'soccer', slug:'conmebol.libertadores', pillClass:'pill-soccer', group:'Soccer - South America' },
-  'conmebol.sudamericana': { name:'South America Copa Sudamericana', sport:'soccer', slug:'conmebol.sudamericana', pillClass:'pill-soccer', group:'Soccer - South America' },
-  'arg.1':        { name:'Argentina Liga Profesional',    sport:'soccer',     slug:'arg.1',                 pillClass:'pill-soccer',   group:'Soccer - Argentina'   },
-  'usa.1':        { name:'USA MLS',                       sport:'soccer',     slug:'usa.1',                 pillClass:'pill-soccer',   group:'Soccer - USA'         },
-  'uefa.champions':     { name:'UEFA Champions League',   sport:'soccer',     slug:'uefa.champions',        pillClass:'pill-soccer',   group:'Soccer - Europe'      },
-  'uefa.champions_qual':{ name:'UEFA UCL Qualifying',     sport:'soccer',     slug:'uefa.champions_qual',   pillClass:'pill-soccer',   group:'Soccer - Europe'      },
-  'uefa.europa':        { name:'UEFA Europa League',      sport:'soccer',     slug:'uefa.europa',           pillClass:'pill-soccer',   group:'Soccer - Europe'      },
-  'uefa.europa_qual':   { name:'UEFA UEL Qualifying',     sport:'soccer',     slug:'uefa.europa_qual',      pillClass:'pill-soccer',   group:'Soccer - Europe'      },
-  'uefa.europa.conf':   { name:'UEFA Conference League',  sport:'soccer',     slug:'uefa.europa.conf',      pillClass:'pill-soccer',   group:'Soccer - Europe'      },
-  'uefa.europa.conf_qual':{ name:'UEFA UECL Qualifying',  sport:'soccer',     slug:'uefa.europa.conf_qual', pillClass:'pill-soccer',   group:'Soccer - Europe'      },
-  'nba':          { name:'NBA',                      sport:'basketball', slug:'nba',                   pillClass:'pill-basketball',group:'Basketball - USA'     },
-  'wnba':         { name:'WNBA',                     sport:'basketball', slug:'wnba',                  pillClass:'pill-basketball',group:'Basketball - USA'     },
-  'mens-college-basketball':{ name:'NCAA Basketball',sport:'basketball', slug:'mens-college-basketball',pillClass:'pill-basketball',group:'Basketball - USA'   },
-  'euroleague':   { name:'EuroLeague',               sport:'basketball', slug:'euroleague',            pillClass:'pill-basketball',group:'Basketball - Europe'  },
-  'eurocup':      { name:'EuroCup',                  sport:'basketball', slug:'eurocup',               pillClass:'pill-basketball',group:'Basketball - Europe'  },
-  'nfl':          { name:'NFL',                      sport:'football',   slug:'nfl',                   pillClass:'pill-football',  group:'American Football'    },
-  'college-football':{ name:'NCAA Football',         sport:'football',   slug:'college-football',      pillClass:'pill-football',  group:'American Football'    },
-  'mlb':          { name:'MLB',                      sport:'baseball',   slug:'mlb',                   pillClass:'pill-baseball',  group:'Baseball'             },
-  'nhl':          { name:'NHL',                      sport:'hockey',     slug:'nhl',                   pillClass:'pill-hockey',    group:'Ice Hockey'           },
-  'atp':          { name:'ATP (Grand Slams + Masters)', sport:'tennis',   slug:'atp',                   pillClass:'pill-tennis',    group:'Tennis'               },
-  'wta':          { name:'WTA (Grand Slams + Masters)', sport:'tennis',   slug:'wta',                   pillClass:'pill-tennis',    group:'Tennis'               },
+  'fifa.world':   { name:'FIFA World Cup 2026',          sport:'soccer',     slug:'fifa.world',            pillClass:'pill-wc',        country:'International' },
+  'fifa.cwc':     { name:'FIFA Club World Cup',           sport:'soccer',     slug:'fifa.cwc',              pillClass:'pill-wc',        country:'International' },
+  'eng.1':        { name:'England Premier League',        sport:'soccer',     slug:'eng.1',                 pillClass:'pill-soccer',    country:'England' },
+  'eng.2':        { name:'England Championship',          sport:'soccer',     slug:'eng.2',                 pillClass:'pill-soccer',    country:'England' },
+  'eng.fa':       { name:'English FA Cup',                 sport:'soccer',     slug:'eng.fa',                pillClass:'pill-soccer',    country:'England' },
+  'eng.fa_qual':  { name:'English FA Cup Qualifying',       sport:'soccer',     slug:'eng.fa_qual',           pillClass:'pill-soccer',    country:'England' },
+  'esp.1':        { name:'Spain La Liga',                 sport:'soccer',     slug:'esp.1',                 pillClass:'pill-soccer',    country:'Spain' },
+  'esp.2':        { name:'Spain Segunda División',        sport:'soccer',     slug:'esp.2',                 pillClass:'pill-soccer',    country:'Spain' },
+  'ger.1':        { name:'Germany Bundesliga',            sport:'soccer',     slug:'ger.1',                 pillClass:'pill-soccer',    country:'Germany' },
+  'ger.2':        { name:'Germany 2. Bundesliga',         sport:'soccer',     slug:'ger.2',                 pillClass:'pill-soccer',    country:'Germany' },
+  'ger.dfb_pokal':{ name:'German Cup (DFB Pokal)',         sport:'soccer',     slug:'ger.dfb_pokal',         pillClass:'pill-soccer',    country:'Germany' },
+  'ita.1':        { name:'Italy Serie A',                 sport:'soccer',     slug:'ita.1',                 pillClass:'pill-soccer',    country:'Italy' },
+  'ita.2':        { name:'Italy Serie B',                 sport:'soccer',     slug:'ita.2',                 pillClass:'pill-soccer',    country:'Italy' },
+  'fra.1':        { name:'France Ligue 1',                sport:'soccer',     slug:'fra.1',                 pillClass:'pill-soccer',    country:'France' },
+  'por.1':        { name:'Portugal Primeira Liga',        sport:'soccer',     slug:'por.1',                 pillClass:'pill-soccer',    country:'Portugal' },
+  'ned.1':        { name:'Netherlands Eredivisie',        sport:'soccer',     slug:'ned.1',                 pillClass:'pill-soccer',    country:'Netherlands' },
+  'tur.1':        { name:'Turkey Süper Lig',              sport:'soccer',     slug:'tur.1',                 pillClass:'pill-soccer',    country:'Türkiye' },
+  'gre.1':        { name:'Greece Super League',           sport:'soccer',     slug:'gre.1',                 pillClass:'pill-soccer',    country:'Greece' },
+  'bra.1':        { name:'Brazil Brasileirão Série A',    sport:'soccer',     slug:'bra.1',                 pillClass:'pill-soccer',    country:'Brazil' },
+  'bra.copa_do_brazil': { name:'Copa do Brasil',          sport:'soccer',     slug:'bra.copa_do_brazil',    pillClass:'pill-soccer',    country:'Brazil' },
+  'conmebol.libertadores': { name:'South America Copa Libertadores', sport:'soccer', slug:'conmebol.libertadores', pillClass:'pill-soccer', country:'International' },
+  'conmebol.sudamericana': { name:'South America Copa Sudamericana', sport:'soccer', slug:'conmebol.sudamericana', pillClass:'pill-soccer', country:'International' },
+  'arg.1':        { name:'Argentina Liga Profesional',    sport:'soccer',     slug:'arg.1',                 pillClass:'pill-soccer',    country:'Argentina' },
+  'usa.1':        { name:'USA MLS',                       sport:'soccer',     slug:'usa.1',                 pillClass:'pill-soccer',    country:'USA' },
+  'ksa.1':        { name:'Saudi Pro League',              sport:'soccer',     slug:'ksa.1',                 pillClass:'pill-soccer',    country:'Saudi Arabia' },
+  'uefa.champions':     { name:'UEFA Champions League',   sport:'soccer',     slug:'uefa.champions',        pillClass:'pill-soccer',    country:'International' },
+  'uefa.champions_qual':{ name:'UEFA UCL Qualifying',     sport:'soccer',     slug:'uefa.champions_qual',   pillClass:'pill-soccer',    country:'International' },
+  'uefa.europa':        { name:'UEFA Europa League',      sport:'soccer',     slug:'uefa.europa',           pillClass:'pill-soccer',    country:'International' },
+  'uefa.europa_qual':   { name:'UEFA UEL Qualifying',     sport:'soccer',     slug:'uefa.europa_qual',      pillClass:'pill-soccer',    country:'International' },
+  'uefa.europa.conf':   { name:'UEFA Conference League',  sport:'soccer',     slug:'uefa.europa.conf',      pillClass:'pill-soccer',    country:'International' },
+  'uefa.europa.conf_qual':{ name:'UEFA UECL Qualifying',  sport:'soccer',     slug:'uefa.europa.conf_qual', pillClass:'pill-soccer',    country:'International' },
+  'caf.champions':       { name:'CAF Champions League',         sport:'soccer', slug:'caf.champions',              pillClass:'pill-soccer', country:'International' },
+  'caf.confed':          { name:'CAF Confederation Cup',        sport:'soccer', slug:'caf.confed',                 pillClass:'pill-soccer', country:'International' },
+  'concacaf.champions':  { name:'Concacaf Champions Cup',       sport:'soccer', slug:'concacaf.champions',         pillClass:'pill-soccer', country:'International' },
+  'concacaf.confederations_playoff': { name:'Concacaf Cup',     sport:'soccer', slug:'concacaf.confederations_playoff', pillClass:'pill-soccer', country:'International' },
+  'concacaf.gold':       { name:'Concacaf Gold Cup',            sport:'soccer', slug:'concacaf.gold',              pillClass:'pill-soccer', country:'International' },
+  'concacaf.gold_qual':  { name:'Concacaf Gold Cup Qualifying',  sport:'soccer', slug:'concacaf.gold_qual',         pillClass:'pill-soccer', country:'International' },
+  'concacaf.nations.league': { name:'Concacaf Nations League',  sport:'soccer', slug:'concacaf.nations.league',    pillClass:'pill-soccer', country:'International' },
+  'nba':          { name:'NBA',                      sport:'basketball', slug:'nba',                   pillClass:'pill-basketball', country:'USA' },
+  'wnba':         { name:'WNBA',                     sport:'basketball', slug:'wnba',                  pillClass:'pill-basketball', country:'USA' },
+  'nba-development': { name:'NBA G League',          sport:'basketball', slug:'nba-development',       pillClass:'pill-basketball', country:'USA' },
+  'nba-summer-las-vegas':  { name:'NBA Las Vegas Summer League',   sport:'basketball', slug:'nba-summer-las-vegas',  pillClass:'pill-basketball', country:'USA' },
+  'nba-summer-california': { name:'NBA California Classic Summer League', sport:'basketball', slug:'nba-summer-california', pillClass:'pill-basketball', country:'USA' },
+  'nba-summer-golden-state': { name:'NBA Golden State Summer League', sport:'basketball', slug:'nba-summer-golden-state', pillClass:'pill-basketball', country:'USA' },
+  'mens-college-basketball':{ name:'NCAA Basketball',sport:'basketball', slug:'mens-college-basketball',pillClass:'pill-basketball', country:'USA' },
+  'fiba':         { name:'FIBA World Cup',           sport:'basketball', slug:'fiba',                  pillClass:'pill-basketball', country:'International' },
+  'euroleague':   { name:'EuroLeague',               sport:'basketball', slug:'euroleague',            pillClass:'pill-basketball', country:'Europe' },
+  'eurocup':      { name:'EuroCup',                  sport:'basketball', slug:'eurocup',               pillClass:'pill-basketball', country:'Europe' },
+  'nfl':          { name:'NFL',                      sport:'football',   slug:'nfl',                   pillClass:'pill-football',   country:'USA' },
+  'college-football':{ name:'NCAA Football',         sport:'football',   slug:'college-football',      pillClass:'pill-football',   country:'USA' },
+  'mlb':          { name:'MLB',                      sport:'baseball',   slug:'mlb',                   pillClass:'pill-baseball',   country:'USA' },
+  'nhl':          { name:'NHL',                      sport:'hockey',     slug:'nhl',                   pillClass:'pill-hockey',     country:'USA' },
+  'atp':          { name:'ATP (Grand Slams + Masters)', sport:'tennis',   slug:'atp',                   pillClass:'pill-tennis',     country:'International' },
+  'wta':          { name:'WTA (Grand Slams + Masters)', sport:'tennis',   slug:'wta',                   pillClass:'pill-tennis',     country:'International' },
 };
 
 // ── ESPN ADAPTER (unchanged from working version) ────────────────────
@@ -466,12 +521,14 @@ function toGreeceLocal(iso) {
 function todayKey() { return toGreeceLocal(new Date().toISOString()).localDateKey; }
 
 // ── LOCAL STORAGE ────────────────────────────────────────────────────
-const LS = { POOL:'oc_pool_v7', THRESH:'oc_thresh_v7', FILTERS:'oc_filters_v7' };
+const LS = { POOL:'oc_pool_v7', THRESH:'oc_thresh_v7', FILTERS:'oc_filters_v7', PRESETS:'oc_presets_v1' };
 const loadPool    = () => { try { return JSON.parse(localStorage.getItem(LS.POOL))    || []; } catch { return []; } };
 const savePool    = a  => localStorage.setItem(LS.POOL, JSON.stringify(a));
 const loadThresh  = () => { try { return JSON.parse(localStorage.getItem(LS.THRESH))  || {low:5,med:12}; } catch { return {low:5,med:12}; } };
 const loadFilters = () => { try { return JSON.parse(localStorage.getItem(LS.FILTERS)) || null; } catch { return null; } };
 const saveFilters = a  => localStorage.setItem(LS.FILTERS, JSON.stringify(a));
+const loadPresets = () => { try { return JSON.parse(localStorage.getItem(LS.PRESETS)) || []; } catch { return []; } };
+const savePresets = a  => localStorage.setItem(LS.PRESETS, JSON.stringify(a));
 
 function saveThresholds() {
   const low = parseInt(document.getElementById('thresh-low').value) || 5;
@@ -490,29 +547,56 @@ let activeFilters = [];
 let calendarData  = {};
 let scanned       = false;
 
-// ── DROPDOWNS ────────────────────────────────────────────────────────
+// ── DROPDOWNS (Sport → Country → League) ──────────────────────────────
 function populateDropdowns() {
-  const selSport  = document.getElementById('sel-sport');
-  const selLeague = document.getElementById('sel-league');
-  const groups = [...new Set(Object.values(LEAGUES).map(l => l.group.split(' - ')[0]))];
+  const selSport   = document.getElementById('sel-sport');
+  const selCountry = document.getElementById('sel-country');
+  const selLeague  = document.getElementById('sel-league');
+
+  const sports = [...new Set(Object.values(LEAGUES).map(l => l.sport))]
+    .sort((a, b) => (SPORT_LABELS[a] || a).localeCompare(SPORT_LABELS[b] || b));
   selSport.innerHTML = '<option value="">— Select Sport —</option>';
-  groups.forEach(g => selSport.insertAdjacentHTML('beforeend', `<option value="${g}">${g}</option>`));
+  sports.forEach(s => selSport.insertAdjacentHTML('beforeend', `<option value="${s}">${SPORT_LABELS[s] || s}</option>`));
+
+  const resetCountry = () => {
+    selCountry.innerHTML = '<option value="">— Select Sport First —</option>';
+    selCountry.disabled  = true;
+  };
+  const resetLeague = () => {
+    selLeague.innerHTML = '<option value="">— Select Country First —</option>';
+    selLeague.disabled  = true;
+  };
+
   selSport.onchange = () => {
     const sport = selSport.value;
-    selLeague.innerHTML = '<option value="">— Select League —</option>';
-    selLeague.disabled  = !sport;
-    if (!sport) return;
-    Object.entries(LEAGUES)
-      .filter(([,m]) => m.group.startsWith(sport))
-      .sort(([,a],[,b]) => a.name.localeCompare(b.name))
-      .forEach(([id, m]) =>
-        selLeague.insertAdjacentHTML('beforeend', `<option value="${id}">${m.name}</option>`)
-      );
+    resetLeague();
+    if (!sport) { resetCountry(); return; }
+    const countries = [...new Set(Object.values(LEAGUES).filter(l => l.sport === sport).map(l => l.country))]
+      .sort((a, b) => (a === 'International') - (b === 'International') || a.localeCompare(b));
+    selCountry.innerHTML = '<option value="">— Select Country —</option>';
+    countries.forEach(c => selCountry.insertAdjacentHTML('beforeend', `<option value="${c}">${c}</option>`));
+    selCountry.disabled = false;
   };
+
+  selCountry.onchange = () => {
+    const sport = selSport.value, country = selCountry.value;
+    resetLeague();
+    if (!country) return;
+    selLeague.innerHTML = '<option value="">— Select League —</option>';
+    Object.entries(LEAGUES)
+      .filter(([, m]) => m.sport === sport && m.country === country)
+      .sort(([, a], [, b]) => a.name.localeCompare(b.name))
+      .forEach(([id, m]) => selLeague.insertAdjacentHTML('beforeend', `<option value="${id}">${m.name}</option>`));
+    selLeague.disabled = false;
+  };
+
+  resetCountry();
+  resetLeague();
 }
 
 function addToPool() {
-  const lid = document.getElementById('sel-league').value;
+  const selLeague = document.getElementById('sel-league');
+  const lid = selLeague.value;
   if (!lid) { showToast('Select a league first.', 'warning'); return; }
   const pool = loadPool();
   if (pool.includes(lid)) { showToast('Already in pool.', 'info'); return; }
@@ -520,6 +604,58 @@ function addToPool() {
   calendarData = {}; scanned = false;
   renderPool(); renderFilterChips(); renderCalendar();
   showToast(`${LEAGUES[lid]?.name} added.`, 'success');
+  selLeague.value = '';
+}
+
+// ── LEAGUE MANAGER PRESETS ─────────────────────────────────────────────
+function saveCurrentAsPreset() {
+  const nameInput = document.getElementById('preset-name');
+  const name = nameInput.value.trim();
+  if (!name) { showToast('Enter a name for this setup.', 'warning'); return; }
+  const pool = loadPool();
+  if (!pool.length) { showToast('Pool is empty — add leagues first.', 'warning'); return; }
+  const presets = loadPresets();
+  const idx = presets.findIndex(p => p.name.toLowerCase() === name.toLowerCase());
+  const preset = { name, leagueIds: [...pool] };
+  if (idx >= 0) presets[idx] = preset; else presets.push(preset);
+  savePresets(presets);
+  nameInput.value = '';
+  renderPresets();
+  showToast(`Setup "${name}" saved (${pool.length} leagues).`, 'success');
+}
+
+function applyPreset(name) {
+  const preset = loadPresets().find(p => p.name === name);
+  if (!preset) return;
+  savePool([...preset.leagueIds]);
+  saveFilters([...preset.leagueIds]);
+  calendarData = {}; scanned = false;
+  renderPool(); renderFilterChips(); renderCalendar();
+  showToast(`Setup "${name}" applied (${preset.leagueIds.length} leagues).`, 'success');
+}
+
+function deletePreset(name) {
+  savePresets(loadPresets().filter(p => p.name !== name));
+  renderPresets();
+}
+
+function renderPresets() {
+  const presets = loadPresets();
+  const el = document.getElementById('preset-list');
+  if (!presets.length) { el.innerHTML = '<div class="p-3 text-text-muted font-mono text-xs italic">No saved setups.</div>'; return; }
+  el.innerHTML = presets.map(p => `
+    <div class="pool-item flex items-center justify-between px-3 py-2.5 transition-all">
+      <div class="flex items-center gap-2">
+        <span class="text-text-bright text-sm font-medium">${p.name}</span>
+        <span class="text-text-muted text-xs font-mono">${p.leagueIds.length} leagues</span>
+      </div>
+      <div class="flex gap-2 shrink-0">
+        <button onclick="applyPreset('${p.name.replace(/'/g, "\\'")}')"
+          class="font-mono text-xs text-accent px-2 py-1 rounded border border-accent hover:bg-accent-bg transition-all uppercase">Apply</button>
+        <button onclick="deletePreset('${p.name.replace(/'/g, "\\'")}')"
+          class="font-mono text-xs text-red px-2 py-1 rounded border border-red-border hover:bg-red-bg transition-all uppercase">✕</button>
+      </div>
+    </div>`).join('');
 }
 
 function removeFromPool(lid) {
@@ -536,13 +672,13 @@ function renderPool() {
   if (!pool.length) { el.innerHTML = '<div class="p-3 text-text-muted font-mono text-xs italic">Pool is empty.</div>'; return; }
   const dotColors = { 'pill-soccer':'#22c55e','pill-basketball':'#f97316','pill-football':'#8b5cf6','pill-baseball':'#06b6d4','pill-hockey':'#64748b','pill-wc':'#facc15','pill-tennis':'#a3e635' };
   el.innerHTML = pool.map(lid => {
-    const m   = LEAGUES[lid] || { name:lid, group:'?', pillClass:'pill-soccer' };
+    const m   = LEAGUES[lid] || { name:lid, sport:'soccer', country:'?', pillClass:'pill-soccer' };
     const dot = dotColors[m.pillClass] || '#6b7585';
     return `<div class="pool-item flex items-center justify-between px-3 py-2.5 transition-all">
       <div class="flex items-center gap-2">
         <span class="inline-block w-2 h-2 rounded-full flex-shrink-0" style="background:${dot}"></span>
         <span class="text-text-bright text-sm font-medium">${m.name}</span>
-        <span class="text-text-muted text-xs font-mono">${m.group}</span>
+        <span class="text-text-muted text-xs font-mono">${m.country} · ${SPORT_LABELS[m.sport] || m.sport}</span>
       </div>
       <button onclick="removeFromPool('${lid}')"
         class="ml-3 shrink-0 font-mono text-xs text-red px-2 py-1 rounded border border-red-border hover:bg-red-bg transition-all uppercase">✕</button>
@@ -559,12 +695,12 @@ function renderFilterChips() {
   activeFilters = saved ? saved.filter(x => pool.includes(x)) : [...pool];
   if (!activeFilters.length) activeFilters = [...pool];
 
-  // Group pool leagues by top-level sport (first word of group)
-  const sportIcons = { 'Soccer':'⚽', 'Basketball':'🏀', 'American':'🏈', 'Baseball':'⚾', 'Ice':'🏒', 'Tennis':'🎾' };
+  // Group pool leagues by sport
+  const sportIcons = { 'Soccer':'⚽', 'Basketball':'🏀', 'American Football':'🏈', 'Baseball':'⚾', 'Ice Hockey':'🏒', 'Tennis':'🎾' };
   const grouped = {};
   pool.forEach(lid => {
-    const m    = LEAGUES[lid] || { name:lid, group:'Other' };
-    const top  = m.group.split(' - ')[0]; // e.g. "Soccer"
+    const m    = LEAGUES[lid] || { name:lid, sport:'other' };
+    const top  = SPORT_LABELS[m.sport] || 'Other';
     if (!grouped[top]) grouped[top] = [];
     grouped[top].push(lid);
   });
@@ -836,7 +972,7 @@ function init() {
     ];
     savePool(demo); activeFilters=[...demo]; saveFilters(activeFilters);
   }
-  renderPool(); renderFilterChips(); renderCalendar();
+  renderPool(); renderFilterChips(); renderPresets(); renderCalendar();
   updateClock(); setInterval(updateClock,1000);
 }
 document.addEventListener('DOMContentLoaded',init);
