@@ -162,9 +162,9 @@ tailwind.config = {
       <div class="text-xs text-text-muted mb-0.5">DATA SOURCE</div>
       <div class="text-xs font-semibold" id="source-label" style="color:#6b7585">● NOT SCANNED</div>
     </div>
-    <div class="stat-box text-center hidden sm:block">
+    <div class="stat-box text-center hidden sm:block cursor-pointer select-none hover:border-border-light transition-all" onclick="toggleTimezone()" title="Click to switch timezone">
       <div class="text-xs text-text-muted mb-0.5">TIMEZONE</div>
-      <div class="text-accent text-sm font-semibold">Europe/Athens</div>
+      <div class="text-accent text-sm font-semibold" id="tz-label">Europe/Athens</div>
     </div>
     <div class="stat-box text-center hidden sm:block">
       <div class="text-xs text-text-muted mb-0.5">LOCAL TIME</div>
@@ -339,7 +339,8 @@ tailwind.config = {
 <div id="toast" class="hidden"></div>
 
 <script>
-const TZ = 'Europe/Athens';
+const TIMEZONES = ['Europe/Athens', 'America/Bogota'];
+let TZ = TIMEZONES[0];
 const MONTH_NAMES = ['January','February','March','April','May','June',
   'July','August','September','October','November','December'];
 
@@ -520,8 +521,31 @@ function toGreeceLocal(iso) {
 }
 function todayKey() { return toGreeceLocal(new Date().toISOString()).localDateKey; }
 
+function rebucketCalendarData() {
+  const events = [];
+  for (const day of Object.values(calendarData)) {
+    for (const evs of Object.values(day.byLeague)) events.push(...evs);
+  }
+  const rebucketed = {};
+  for (const ev of events) {
+    const { localDateKey, localTimeStr } = toGreeceLocal(ev.utcTimestamp);
+    if (!rebucketed[localDateKey]) rebucketed[localDateKey] = { byLeague: {} };
+    if (!rebucketed[localDateKey].byLeague[ev.leagueId]) rebucketed[localDateKey].byLeague[ev.leagueId] = [];
+    rebucketed[localDateKey].byLeague[ev.leagueId].push({ ...ev, localTime: localTimeStr });
+  }
+  calendarData = rebucketed;
+}
+
+function toggleTimezone() {
+  TZ = TIMEZONES[(TIMEZONES.indexOf(TZ) + 1) % TIMEZONES.length];
+  localStorage.setItem(LS.TZ, TZ);
+  document.getElementById('tz-label').textContent = TZ;
+  updateClock();
+  if (scanned) { rebucketCalendarData(); renderCalendar(); }
+}
+
 // ── LOCAL STORAGE ────────────────────────────────────────────────────
-const LS = { POOL:'oc_pool_v7', THRESH:'oc_thresh_v7', FILTERS:'oc_filters_v7', PRESETS:'oc_presets_v1' };
+const LS = { POOL:'oc_pool_v7', THRESH:'oc_thresh_v7', FILTERS:'oc_filters_v7', PRESETS:'oc_presets_v1', TZ:'oc_tz_v1' };
 const loadPool    = () => { try { return JSON.parse(localStorage.getItem(LS.POOL))    || []; } catch { return []; } };
 const savePool    = a  => localStorage.setItem(LS.POOL, JSON.stringify(a));
 const loadThresh  = () => { try { return JSON.parse(localStorage.getItem(LS.THRESH))  || {low:5,med:12}; } catch { return {low:5,med:12}; } };
@@ -958,6 +982,11 @@ function updateClock() {
 
 // ── INIT ─────────────────────────────────────────────────────────────
 function init() {
+  const savedTz = localStorage.getItem(LS.TZ);
+  if (savedTz && TIMEZONES.includes(savedTz)) {
+    TZ = savedTz;
+    document.getElementById('tz-label').textContent = TZ;
+  }
   const th=loadThresh();
   document.getElementById('thresh-low').value=th.low;
   document.getElementById('thresh-med').value=th.med;
